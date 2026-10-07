@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Win32 API C++ 完整入门教程</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        base: '#0b101b',
+        surface: '#131a2b',
+        card: '#192338',
+        primary: '#5eead4',
+        secondary: '#93c5fd',
+        warn: '#fcd34d',
+        danger: '#f87171',
+        textMain: '#e2e8f0',
+        textMuted: '#94a3b8'
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['Consolas', 'JetBrains Mono', 'monospace']
+      },
+      animation: {
+        fadeInUp: 'fadeInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        glowPulse: 'glowPulse 4s ease-in-out infinite'
+      },
+      keyframes: {
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        glowPulse: {
+          '0%, 100%': { opacity: '0.15' },
+          '50%': { opacity: '0.35' }
+        }
+      }
+    }
+  }
+}
+</script>
+<style type="text/tailwindcss">
+@layer utilities {
+  .content-auto { content-visibility: auto; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .card-shadow { box-shadow: 0 4px 24px rgba(94, 234, 212, 0.08); }
+  .card-hover { transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(94, 234, 212, 0.14); }
+  .code-block { transition: border-color 0.3s ease; }
+  .code-block:hover { border-color: #5eead4; }
+  .toc-active { @apply border-l-2 border-primary text-primary pl-3; }
+}
+</style>
+<style>
+html { scroll-behavior: smooth; }
+body { background-color: #0b101b; }
+/* 自定义滚动条 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #131a2b; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+/* 代码块行号 */
+pre[class*="language-"] { padding-left: 3.8em !important; }
+</style>
+</head>
+<body class="text-textMain font-sans min-h-screen">
+<!-- 顶部背景光晕 -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+  <div class="absolute top-[-120px] left-[-100px] w-[400px] h-[400px] bg-primary/20 rounded-full blur-3xl animate-glowPulse"></div>
+  <div class="absolute bottom-[-150px] right-[-120px] w-[450px] h-[450px] bg-secondary/15 rounded-full blur-3xl animate-glowPulse" style="animation-delay: -2s"></div>
+</div>
+
+<div class="relative z-10 flex flex-col lg:flex-row">
+  <!-- 侧边导航栏 -->
+  <aside class="lg:w-72 w-full lg:sticky lg:top-0 lg:h-screen overflow-y-auto bg-surface p-6 lg:pr-4 scrollbar-hide">
+    <div class="mb-8 opacity-0 animate-fadeInUp">
+      <h1 class="text-xl font-bold text-primary mb-1">Win32 API C++</h1>
+      <p class="text-sm text-textMuted">完整入门教程</p>
+    </div>
+    <nav class="space-y-1 opacity-0 animate-fadeInUp animate-delay-100" id="toc">
+      <a href="#preface" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">前言与环境说明</a>
+      <a href="#core-concept" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">1. 核心概念总览</a>
+      <a href="#min-template" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">2. 最小完整模板（Unicode W版）</a>
+      <a href="#controls" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">3. 创建标准子控件</a>
+      <a href="#edit-interact" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">4. 读写编辑框文本</a>
+      <a href="#gdi-paint" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">5. GDI文字绘图 WM_PAINT</a>
+      <a href="#msg-table" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">6. 常见消息速查表</a>
+      <a href="#pitfall" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">7. 典型踩坑</a>
+      <a href="#practice-road" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">8. 练习递进路线</a>
+      <a href="#when-qt" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">9. 什么时候放弃Win32转Qt</a>
+      <a href="#ansi-demo" class="toc-link block py-1.5 text-sm text-textMuted hover:text-primary transition-all">10. ANSI标准版源码</a>
+    </nav>
+  </aside>
+
+  <!-- 主内容区域 -->
+  <main class="flex-1 px-4 md:px-10 py-10 max-w-5xl">
+    <!-- 头部标题卡片 -->
+    <header class="card-hover card-shadow bg-card rounded-2xl p-8 mb-10 opacity-0 animate-fadeInUp animate-delay-200">
+      <h1 class="text-3xl md:text-4xl font-bold text-primary mb-3">Win32 API C++ 完整入门教程</h1>
+      <p class="text-lg text-textMuted">高颜值动效版 · 从零学会 Windows 原生 GUI 开发，无需任何第三方库</p>
+    </header>
+
+    <!-- 章节：前言与环境说明 -->
+    <section id="preface" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">📌 前言与环境说明</h2>
+      <p class="text-textMuted leading-relaxed mb-4">本教程适配有C++基础的进阶学习者，同时附赠完整小白零基础入门章节，兼顾原理深度与实操落地。Win32 API是Windows系统原生GUI开发接口，无需安装任何第三方库，纯净实现桌面窗口、控件、交互功能。</p>
+      <h3 class="text-lg font-semibold text-secondary mt-6 mb-3">适配环境</h3>
+      <ul class="list-disc pl-6 text-textMuted space-y-1">
+        <li>操作系统：Windows 全版本</li>
+        <li>编译器：MinGW-w64 / MSVC</li>
+      </ul>
+      <h3 class="text-lg font-semibold text-secondary mt-6 mb-3">前置基础</h3>
+      <ul class="list-disc pl-6 text-textMuted space-y-1">
+        <li>C++ 基础语法、指针、结构体</li>
+        <li>理解回调函数、消息驱动思想</li>
+      </ul>
+      <div class="mt-6 p-4 border-l-4 border-secondary bg-surface rounded-r-lg">
+        <p class="text-textMuted"><strong class="text-secondary">核心区分：</strong>A后缀函数（ANSI <code>char*</code>）、W后缀函数（Unicode <code>WCHAR*</code>，现代Windows推荐），无后缀宏自动适配字符集。</p>
+      </div>
+    </section>
+
+    <!-- 章节：核心概念总览 -->
+    <section id="core-concept" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">1. 核心概念总览</h2>
+      <ul class="space-y-3 text-textMuted">
+        <li><strong class="text-secondary">HINSTANCE</strong>：程序实例句柄，唯一标识当前进程模块。</li>
+        <li><strong class="text-secondary">HWND</strong>：窗口句柄，所有窗口、按钮、输入框的唯一标识，属于系统内核对象，并非C++指针。</li>
+        <li><strong class="text-secondary">WndProc 窗口过程</strong>：系统回调函数，用户不主动调用，Windows推送所有界面事件到此函数处理。</li>
+        <li><strong class="text-secondary">MSG 消息结构体</strong>：存储系统事件信息，包含消息ID、附加参数 wParam/lParam。</li>
+      </ul>
+      <div class="mt-6">
+        <h4 class="text-lg font-semibold text-secondary mb-2">消息循环：GUI程序核心常驻逻辑，三步执行：</h4>
+        <ol class="list-decimal pl-6 text-textMuted space-y-1">
+          <li><code>GetMessage</code>：阻塞等待用户操作，无事件则休眠（低CPU占用）</li>
+          <li><code>TranslateMessage</code>：翻译键盘原始按键为字符消息</li>
+          <li><code>DispatchMessage</code>：分发消息到对应窗口的WndProc</li>
+        </ol>
+      </div>
+      <div class="mt-6 p-4 border-l-4 border-secondary bg-surface rounded-r-lg">
+        <ul class="text-textMuted space-y-1">
+          <li>程序入口差异：控制台程序 <code>main()</code>，Win32 GUI程序 <code>WinMain()</code></li>
+          <li>编译关键：MinGW编译Win32 GUI程序必须加链接参数 <code>-luser32</code>；子系统 <code>WINDOWS</code> 无黑框，<code>CONSOLE</code> 附带控制台。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 章节：最小完整模板 Unicode W版 -->
+    <section id="min-template" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">2. 最小完整模板（Unicode W版本·推荐）</h2>
+      <p class="text-textMuted mb-4">现代Windows原生支持Unicode，优先使用W后缀API，无乱码问题，兼容性最强。</p>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-cpp">#include &lt;windows.h&gt;
+
+// 窗口过程回调
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch(uMsg)
+    {
+    case WM_CREATE:
+        // 窗口刚创建完成时触发，适合在这里创建子控件（按钮、输入框）
+        break;
+
+    case WM_DESTROY:
+        // 用户点击关闭按钮，窗口销毁，发送退出消息跳出消息循环
+        PostQuitMessage(0);
+        break;
+
+    default:
+        // 没有处理的消息必须交给默认窗口过程，否则窗口直接失效
+        return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+    }
+    return 0;
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPWSTR lpCmd, int nShow)
+{
+    // 1. 填充窗口类结构体 WNDCLASSEXW
+    WNDCLASSEXW wc = {0};
+    wc.cbSize        = sizeof(WNDCLASSEXW);
+    wc.lpfnWndProc   = WndProc;        //绑定消息回调
+    wc.hInstance     = hInst;
+    wc.lpszClassName = L"MyWin32Demo"; //窗口类名，宽字符串 L""
+    wc.hCursor       = LoadCursorW(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1); //窗口背景色
+
+    //注册窗口类到操作系统
+    if(!RegisterClassExW(&wc))
+    {
+        MessageBoxW(NULL, L"注册窗口类失败",L"Error", MB_ICONERROR);
+        return 0;
+    }
+
+    //2. 创建主窗口 CreateWindowExW，扩展创建函数（比CreateWindow功能更强）
+    HWND hMainWnd = CreateWindowExW(
+       0,
+        L"MyWin32Demo",          //窗口类名，必须和注册的一致
+        L"Win32 API Demo",       //窗口标题
+        WS_OVERLAPPEDWINDOW,     //窗口样式：标题栏、最小化最大化关闭
+        CW_USEDEFAULT, CW_USEDEFAULT, //x,y 位置交给系统默认
+        600, 400,                //宽、高
+        NULL, NULL, hInst, NULL );
+
+    if(!hMainWnd)
+    {
+        MessageBoxW(NULL, L"创建主窗口失败", L"Error", MB_ICONERROR);
+        return 0;
+    }
+
+    ShowWindow(hMainWnd, nShow);
+    UpdateWindow(hMainWnd); //触发WM_PAINT重绘
+
+    //3. 消息循环
+    MSG msg;
+    while(GetMessageW(&msg, NULL, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+    return (int)msg.wParam;
+}</code></pre>
+      </div>
+      <h4 class="mt-6 text-lg font-semibold text-secondary">MinGW 编译命令：</h4>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface mt-3">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-bash">g++ main.cpp -o win32demo.exe -luser32</code></pre>
+      </div>
+      <h4 class="mt-6 text-lg font-semibold text-secondary">代码流程拆解</h4>
+      <ol class="list-decimal pl-6 text-textMuted space-y-1">
+        <li>初始化窗口结构体，绑定消息回调、样式、实例句柄</li>
+        <li>向系统注册自定义窗口类</li>
+        <li>基于注册类创建可视化主窗口</li>
+        <li>显示并刷新窗口，开启常驻消息循环</li>
+      </ol>
+    </section>
+
+    <!-- 章节：创建标准子控件 -->
+    <section id="controls" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">3. 创建标准子控件（按钮 BUTTON、编辑框 EDIT）</h2>
+      <p class="text-textMuted mb-4">系统内置控件无需手动注册窗口类，直接通过 <code>CreateWindowExW</code> 创建，所有控件本质都是<strong>子窗口</strong>。</p>
+      <h3 class="text-lg font-semibold text-secondary mt-3">控件必备属性</h3>
+      <ul class="list-disc pl-6 text-textMuted">
+        <li><code>WS_CHILD</code>：标记为子控件，依附主窗口</li>
+        <li><code>WS_VISIBLE</code>：创建后直接显示控件</li>
+        <li>绑定父窗口HWND、唯一整数控件ID</li>
+      </ul>
+      <p class="mt-3 text-textMuted">控件统一在 <code>WM_CREATE</code> 消息中创建（窗口初始化阶段，无闪烁、无报错）：</p>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface mt-4">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-cpp">case WM_CREATE:
+{
+   HWND hBtn = CreateWindowExW(
+       0,
+        L"BUTTON",
+        L"点击我",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        20,20,120,40,  // x y width height
+        hWnd,
+        (HMENU)1001, //控件ID 1001
+        ((LPCREATESTRUCTW*)lParam)->hInstance,
+        NULL
+    );
+
+    HWND hEdit = CreateWindowExW(
+        0,
+        L"EDIT",
+        L"在这里输入",
+        WS_CHILD | WS_VISIBLE | WS_BORDER,
+       160, 20, 220,30,
+        hWnd,
+        (HMENU)1002, //编辑框ID
+        ((LPCREATESTRUCTW*)lParam)->hInstance,
+        NULL
+    );
+    break;
+}</code></pre>
+      </div>
+      <h3 class="text-lg font-semibold text-secondary mt-6">按钮点击事件捕获 WM_COMMAND</h3>
+      <p class="text-textMuted">按钮点击触发 <code>WM_COMMAND</code> 消息，通过 wParam 解析控件ID和点击事件：</p>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface mt-4">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-cpp">case WM_COMMAND:
+{
+    UINT notify = HIWORD(wParam);
+    UINT cid    = LOWORD(wParam);
+    if(cid == 1001 && notify == BN_CLICKED)
+    {
+        MessageBoxW(hWnd, L"按钮被点击！", L"提示", MB_OK);
+    }
+    break;
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- 章节：读写编辑框文本 -->
+    <section id="edit-interact" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">4. 和控件交互：读写编辑框文本</h2>
+      <p class="text-textMuted mb-4">通过 <code>SendMessageW</code> 向控件发送系统消息，实现文本读取、修改，是Win32控件交互的核心方式。</p>
+      <ul class="list-disc pl-6 text-textMuted mb-4">
+        <li><code>WM_GETTEXTLENGTH</code>：获取编辑框文本长度</li>
+        <li><code>WM_GETTEXT</code>：读取编辑框文本到缓冲区</li>
+        <li><code>WM_SETTEXT</code>：设置编辑框显示文本</li>
+      </ul>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-cpp">#include &lt;string&gt;
+// hEdit：编辑框HWND，输出std::wstring
+std::wstring GetEditText(HWND hEdit)
+{
+    int len = (int)SendMessageW(hEdit, WM_GETTEXTLENGTH, 0, 0);
+    if(len <=0) return L"";
+    std::wstring buf(len+1,0);
+    SendMessageW(hEdit, WM_GETTEXT, len+1, (LPARAM)buf.data());
+    return buf;
+}</code></pre>
+      </div>
+      <div class="mt-6 p-4 border-l-4 border-warn bg-surface rounded-r-lg">
+        <p class="text-textMuted"><strong class="text-warn">消息区别：</strong><code>SendMessage</code> 同步阻塞等待执行完毕；<code>PostMessage</code> 异步投递消息，立即返回，不阻塞线程。</p>
+      </div>
+    </section>
+
+    <!-- 章节：GDI绘图 -->
+    <section id="gdi-paint" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">5. GDI文字绘图 WM_PAINT</h2>
+      <p class="text-textMuted mb-4">窗口遮挡、缩放、刷新时系统自动触发 <code>WM_PAINT</code> 消息，所有绘图逻辑必须写在此消息内，必须成对使用<code>BeginPaint/EndPaint</code>。</p>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-cpp">case WM_PAINT:
+{
+    PAINTSTRUCT ps;
+    HDC hdc = BeginPaint(hwnd, &ps);
+
+    //GDI绘制文字
+    TextOutW(hdc, 20,100, L"Hello Win32 GDI", lstrlenW(L"Hello Win32 GDI"));
+
+    EndPaint(hwnd, &ps);
+    break;
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- 章节：消息速查表 -->
+    <section id="msg-table" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">6. 必须掌握的常见消息速查表</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="py-3 px-3 text-left text-secondary">消息常量</th>
+              <th class="py-3 px-3 text-left text-secondary">触发时机</th>
+            </tr>
+          </thead>
+          <tbody class="text-textMuted">
+            <tr class="border-b border-slate-800 hover:bg-surface transition-colors">
+              <td class="py-3 px-3"><code>WM_CREATE</code></td>
+              <td class="py-3 px-3">窗口创建完成，初始化子控件专用</td>
+            </tr>
+            <tr class="border-b border-slate-800 hover:bg-surface transition-colors">
+              <td class="py-3 px-3"><code>WM_COMMAND</code></td>
+              <td class="py-3 px-3">按钮、编辑框、菜单交互通知</td>
+            </tr>
+            <tr class="border-b border-slate-800 hover:bg-surface transition-colors">
+              <td class="py-3 px-3"><code>WM_PAINT</code></td>
+              <td class="py-3 px-3">窗口需要重绘，执行GDI绘图</td>
+            </tr>
+            <tr class="border-b border-slate-800 hover:bg-surface transition-colors">
+              <td class="py-3 px-3"><code>WM_SIZE</code></td>
+              <td class="py-3 px-3">窗口大小改变，手动适配控件布局</td>
+            </tr>
+            <tr class="border-b border-slate-800 hover:bg-surface transition-colors">
+              <td class="py-3 px-3"><code>WM_DESTROY</code></td>
+              <td class="py-3 px-3">窗口销毁，退出程序</td>
+            </tr>
+            <tr class="hover:bg-surface transition-colors">
+              <td class="py-3 px-3"><code>WM_CLOSE</code></td>
+              <td class="py-3 px-3">用户点击关闭按钮，可拦截确认弹窗</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-6 p-4 border-l-4 border-danger bg-surface rounded-r-lg">
+        <p class="text-textMuted"><strong class="text-danger">重点提醒：</strong>Win32 无自动布局！窗口拉伸后控件不会自适应，需捕获<code>WM_SIZE</code>消息，调用<code>SetWindowPos()</code>手动调整控件位置大小。</p>
+      </div>
+    </section>
+
+    <!-- 章节：典型踩坑 -->
+    <section id="pitfall" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">7. 典型踩坑（非小白必看）</h2>
+      <ul class="list-disc pl-6 text-textMuted space-y-2">
+        <li><strong class="text-secondary">A/W字符串混用</strong>：L""宽字符仅适配W-API，<code>char*</code>不可传入Unicode接口，直接乱码崩溃</li>
+        <li><strong class="text-secondary">控件样式缺失</strong>：缺少<code>WS_CHILD</code>变独立窗口，缺少<code>WS_VISIBLE</code>控件隐藏</li>
+        <li><strong class="text-secondary">消息循环错误</strong>：禁止while(true)死循环，必须判断GetMessage返回值</li>
+        <li><strong class="text-secondary">句柄误区</strong>：HWND是系统内核句柄，非C++指针，不能delete释放</li>
+        <li><strong class="text-secondary">GDI资源泄漏</strong>：HDC、画笔、画刷必须手动DeleteObject释放</li>
+        <li><strong class="text-secondary">TCHAR宏不推荐</strong>：现代开发优先直接使用W后缀Unicode API，兼容性更强</li>
+      </ul>
+    </section>
+
+    <!-- 章节：练习递进路线 -->
+    <section id="practice-road" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">8. 练习递进路线</h2>
+      <ol class="list-decimal pl-6 text-textMuted space-y-2">
+        <li>跑通基础模板，自定义修改窗口大小、标题、背景色</li>
+        <li>添加按钮+编辑框，实现点击读取输入、弹窗输出</li>
+        <li>捕获WM_SIZE消息，实现窗口拉伸、控件自适应布局</li>
+        <li>学习GDI绘图，绘制文字、矩形、简单图形</li>
+        <li>实战开发：Win32原生GUI计算器（输入‑计算‑输出完整逻辑）</li>
+        <li>进阶拓展：菜单栏、弹窗对话框、资源文件加载</li>
+      </ol>
+    </section>
+
+    <!-- 章节：什么时候转Qt -->
+    <section id="when-qt" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">9. 什么时候放弃 Win32 转 Qt</h2>
+      <p class="text-textMuted mb-4">Win32适合底层原理学习，不适合复杂项目开发，出现以下情况建议转Qt：</p>
+      <ul class="list-disc pl-6 text-textMuted space-y-1">
+        <li>需要大量控件、复杂布局，手写适配成本过高</li>
+        <li>需要表格、树形控件、富文本、动画等高级组件</li>
+        <li>需要跨平台运行（Windows/Linux/macOS）</li>
+      </ul>
+    </section>
+
+    <!-- 章节：ANSI标准版源码 -->
+    <section id="ansi-demo" class="card-hover card-shadow bg-card rounded-2xl p-8 mb-8 opacity-0 animate-fadeInUp">
+      <h2 class="text-2xl font-semibold text-primary mb-5">10. 经典标准版 Win32 窗口源码（ANSI 完整版）</h2>
+      <p class="text-textMuted mb-4">全网通用教学模板，兼容所有编译器，带图标、边框、容错机制、结构清零，标准化工业写法。</p>
+      <div class="relative code-block border border-slate-700 rounded-xl overflow-hidden bg-surface">
+        <button class="absolute top-3 right-3 z-10 px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors" onclick="copyCode(this)">复制</button>
+<pre><code class="language-cpp">#include &lt;windows.h&gt;
+
+/* 窗口过程回调函数：操作系统推送所有窗口消息到此函数 */
+LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+	switch(Message) {
+		/* 窗口销毁消息：用户点击关闭按钮触发 */
+		case WM_DESTROY: {
+			PostQuitMessage(0); // 投递退出消息，终止消息循环
+			break;
+		}
+		/* 所有未自定义处理的消息，交由系统默认处理器处理（必须写） */
+		default:
+			return DefWindowProc(hwnd, Message, wParam, lParam);
+	}
+	return 0;
+}
+
+/* Win32 GUI 程序唯一入口，替代控制台 main */
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+	WNDCLASSEX wc;    // 窗口类属性结构体，定义窗口基础样式
+	HWND hwnd;        // 窗口句柄，标识唯一窗口实例
+	MSG msg;          // 消息结构体，存储系统推送的事件
+
+	// 1. 结构体内存清零（规范写法，避免脏数据导致窗口注册失败）
+	memset(&wc,0,sizeof(wc));
+
+	// 2. 配置窗口类核心参数
+	wc.cbSize		 = sizeof(WNDCLASSEX);        // 结构体大小，固定必填
+	wc.lpfnWndProc	 = WndProc;                    // 绑定自定义消息回调函数
+	wc.hInstance	 = hInstance;                  // 绑定当前程序实例句柄
+	wc.hCursor		 = LoadCursor(NULL, IDC_ARROW);// 设置窗口默认鼠标指针
+
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);  // 窗口背景色（系统默认白色）
+	wc.lpszClassName = "WindowClass";              // 自定义窗口类名（全局唯一）
+	wc.hIcon		 = LoadIcon(NULL, IDI_APPLICATION); // 窗口大图标
+	wc.hIconSm		 = LoadIcon(NULL, IDI_APPLICATION); // 窗口小图标（任务栏）
+
+	// 3. 注册窗口类到操作系统内核
+	if(!RegisterClassEx(&wc)) {
+		MessageBox(NULL, "Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+		return 0;
+	}
+
+	// 4. 创建顶层窗口（带扩展样式）
+	hwnd = CreateWindowEx(
+		WS_EX_CLIENTEDGE,        // 扩展样式：窗口客户区凹陷边框
+		"WindowClass",           // 绑定已注册的窗口类名
+		"Caption",               // 窗口标题
+		WS_VISIBLE|WS_OVERLAPPEDWINDOW, // 窗口样式：默认显示+标准窗口样式
+		CW_USEDEFAULT,           // 窗口X坐标（系统默认）
+		CW_USEDEFAULT,           // 窗口Y坐标（系统默认）
+		640,                     // 窗口宽度
+		480,                     // 窗口高度
+		NULL,NULL,hInstance,NULL
+	);
+
+	// 窗口创建失败容错判断
+	if(hwnd == NULL) {
+		MessageBox(NULL,"Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+		return 0;
+	}
+
+	// 消息循环
+	while(GetMessage(&msg, NULL, 0, 0) > 0)
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return (int)msg.wParam;
+}</code></pre>
+      </div>
+    </section>
+
+    <footer class="mt-16 pt-8 border-t border-slate-800 text-center text-textMuted text-sm">
+      Win32 API C++ 完整入门教程 | 技术文档动效版
+    </footer>
+  </main>
+</div>
+
+<script>
+// 代码复制功能
+function copyCode(btn){
+  const pre = btn.nextElementSibling;
+  const text = pre.textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const originText = btn.innerText;
+    btn.innerText = "✅ 已复制";
+    setTimeout(()=> btn.innerText = originText,1200);
+  });
+}
+
+// 滚动监听，目录自动高亮当前章节
+const sections = document.querySelectorAll("section[id]");
+const tocLinks = document.querySelectorAll(".toc-link");
+window.addEventListener("scroll", ()=>{
+  let current = "";
+  sections.forEach(section=>{
+    const sectionTop = section.offsetTop;
+    const sectionHeight = section.clientHeight;
+    if(window.scrollY >= (sectionTop - 220)){
+      current = section.getAttribute("id");
+    }
+  })
+  tocLinks.forEach(link=>{
+    link.classList.remove("toc-active");
+    if(link.getAttribute("href").substring(1) === current){
+      link.classList.add("toc-active");
+    }
+  })
+})
+
+// Prism渲染代码高亮
+document.addEventListener('DOMContentLoaded', function() {
+  Prism.highlightAll();
+});
+</script>
+</body>
+</html>
+<!-- （注：内容由AI生成） -->
